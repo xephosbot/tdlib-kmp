@@ -41,12 +41,17 @@ internal object TdLibLoader {
 
     private fun osResourceDir(): String {
         val os = System.getProperty("os.name").lowercase()
-        val arch = System.getProperty("os.arch")
+        val arch = archId(System.getProperty("os.arch"))
         return when {
-            os.contains("mac") -> "macos-${if (arch == "aarch64") "arm64" else "x86_64"}"
-            os.contains("linux") -> "linux-${if (arch == "aarch64") "arm64" else "x86_64"}"
-            os.contains("windows") -> "windows-${if (arch == "aarch64") "arm64" else "x64"}"
+            os.contains("mac") -> "macos-$arch"
+            os.contains("linux") -> "linux-$arch"
+            os.contains("windows") -> "windows-${if (arch == "arm64") "arm64" else "x64"}"
             else -> error("Unsupported OS: $os")
         }
+    }
+
+    private fun archId(arch: String): String = when (arch) {
+        "aarch64", "arm64" -> "arm64"
+        else -> "x86_64"
     }
 }

@@ -63,12 +63,12 @@ fun TdlibProjectContext.configureAndroidTarget(abis: Map<String, String>) = with
 // ---------------------------------------------------------------------------
 
 private fun jniLocalDir(): String {
-    val archId = when (hostOs) {
-        TdlibOS.Windows -> if (hostArch == TdlibArch.X64) "x64" else "arm64"
-        else -> if (hostArch == TdlibArch.X64) "x86_64" else "arm64"
+    val archId = when {
+        hostOs == TdlibOS.Windows && hostArch == TdlibArch.X64 -> "x64"
+        hostArch == TdlibArch.X64 -> "x86_64"
+        else -> "arm64"
     }
-    val localArch = if (hostOs == TdlibOS.Windows && hostArch == TdlibArch.X64) "x64" else archId
-    return "${hostOs.id}-$localArch-jni"
+    return "${hostOs.id}-$archId-jni"
 }
 
 private fun nativeArchId(): String = when {
