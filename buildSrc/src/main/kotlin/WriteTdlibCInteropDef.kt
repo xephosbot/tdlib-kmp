@@ -27,7 +27,7 @@ abstract class WriteTdlibCInteropDef : DefaultTask() {
         val file = outputFile.get().asFile
         file.parentFile.mkdirs()
         file.bufferedWriter().use { w ->
-            w.appendLine("package = io.github.xephosbot.tdlib.cinterop")
+            w.appendLine("package = io.xbot.tdlib.cinterop")
             w.appendLine("headers = td_json_client.h td_log.h")
             w.appendLine("headerFilter = td_json_client.h td_log.h td/telegram/**")
 

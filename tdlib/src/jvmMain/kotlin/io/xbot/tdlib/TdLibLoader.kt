@@ -1,31 +1,21 @@
-package io.github.xephosbot.tdlib
+package io.xbot.tdlib
 
 import java.io.File
 
-/**
- * Extracts the TDLib JNI shared library from the classpath JAR and loads it.
- *
- * The library is expected at `native/{os-arch}/libtdjson.{ext}` inside the JAR.
- * Analogous to how JetBrains/skiko loads `libskiko` on JVM.
- */
 internal object TdLibLoader {
-    @Volatile
-    private var loaded = false
+    @Volatile private var loaded = false
 
     @Synchronized
     fun load() {
         if (loaded) return
-
-        val libName = System.mapLibraryName("tdjson") // libtdjson.so / libtdjson.dylib / tdjson.dll
+        val libName = System.mapLibraryName("tdjson")
         val resourceDir = osResourceDir()
         val resourcePath = "/native/$resourceDir/lib/$libName"
         val stream = TdLibLoader::class.java.getResourceAsStream(resourcePath)
-
         if (stream != null) {
             val tempDir = File(System.getProperty("java.io.tmpdir"), "tdlib-kmp")
             tempDir.mkdirs()
             val tempFile = File(tempDir, libName)
-
             stream.use { input ->
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
@@ -33,7 +23,6 @@ internal object TdLibLoader {
         } else {
             System.loadLibrary("tdjson")
         }
-
         loaded = true
     }
 

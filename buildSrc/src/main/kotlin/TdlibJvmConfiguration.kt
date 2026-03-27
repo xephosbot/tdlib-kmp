@@ -26,7 +26,12 @@ import org.gradle.kotlin.dsl.register
 fun TdlibProjectContext.configureJvmTarget(jniExtractTask: String) = with(project) {
     val jniLibsDir = file("libs/${jniLocalDir()}")
 
-    // --- Pack JNI library into JVM resources --------------------------------
+    // Add JNI shared library to JVM resources so it's included in the published JAR
+    kotlin.sourceSets.getByName("jvmMain") {
+        resources.srcDir(jniLibsDir)
+    }
+
+    // --- Pack JNI library into standalone classifier JAR --------------------------------
     tasks.register<Jar>("jvmJniJar") {
         group = "tdlib"
         description = "Packages host JNI library into JVM resources"
@@ -53,6 +58,9 @@ fun TdlibProjectContext.configureJvmTarget(jniExtractTask: String) = with(projec
 fun TdlibProjectContext.configureAndroidTarget(abis: Map<String, String>) = with(project) {
     abis.forEach { (_, extractTask) ->
         tasks.matching { it.name.startsWith("compile") && it.name.contains("Android") }.configureEach {
+            dependsOn(extractTask)
+        }
+        tasks.matching { it.name.startsWith("merge") && it.name.contains("JniLibFolders") }.configureEach {
             dependsOn(extractTask)
         }
     }

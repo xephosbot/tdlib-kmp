@@ -31,15 +31,15 @@ tdlib-kmp/
 ├── tdlib/                              — Core library module
 │   ├── build.gradle.kts
 │   └── src/
-│       ├── commonMain/kotlin/io/github/xephosbot/tdlib/
+│       ├── commonMain/kotlin/io/xbot/tdlib/
 │       │   ├── TdLib.kt                — Public API
 │       │   └── NativeBridge.kt         — expect declarations
-│       ├── nativeMain/kotlin/io/github/xephosbot/tdlib/
+│       ├── nativeMain/kotlin/io/xbot/tdlib/
 │       │   └── NativeBridge.native.kt  — cinterop implementation
-│       ├── jvmMain/kotlin/io/github/xephosbot/tdlib/
+│       ├── jvmMain/kotlin/io/xbot/tdlib/
 │       │   ├── NativeBridge.jvm.kt     — JNI implementation
 │       │   └── TdLibLoader.kt          — Native lib extractor/loader
-│       ├── androidMain/kotlin/io/github/xephosbot/tdlib/
+│       ├── androidMain/kotlin/io/xbot/tdlib/
 │       │   └── NativeBridge.android.kt — Android JNI implementation
 │       └── commonTest/kotlin/
 │           └── TdLibTest.kt            — Shared tests
@@ -57,7 +57,7 @@ dependencies {
 ```
 
 ```kotlin
-import io.github.xephosbot.tdlib.TdLib
+import io.xbot.tdlib.TdLib
 
 val clientId = TdLib.createClientId()
 TdLib.send(clientId, """{"@type":"getOption","name":"version"}""")
