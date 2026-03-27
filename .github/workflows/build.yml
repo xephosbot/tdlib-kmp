@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Download TDLib artifacts
+        run: ./gradlew downloadAllTdlib
+      - name: Build Linux targets
+        run: ./gradlew linuxX64MainKlibrary linuxArm64MainKlibrary compileKotlinJvm
+      - name: Run JVM tests
+        run: ./gradlew jvmTest
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Download TDLib artifacts
+        run: ./gradlew downloadAllTdlib
+      - name: Build macOS targets
+        run: ./gradlew macosArm64MainKlibrary macosX64MainKlibrary
+      - name: Build iOS targets
+        run: ./gradlew iosArm64MainKlibrary iosSimulatorArm64MainKlibrary
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Download TDLib artifacts
+        run: ./gradlew downloadAllTdlib
+      - name: Build JVM target
+        run: ./gradlew compileKotlinJvm
