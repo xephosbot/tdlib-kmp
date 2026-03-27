@@ -1,4 +1,4 @@
-package io.github.xephosbot.tdlib
+package io.xbot.tdlib
 
 import kotlin.test.Test
 import kotlin.test.assertNotNull

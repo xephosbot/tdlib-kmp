@@ -39,7 +39,7 @@ kotlin {
     applyHierarchyTemplate(tdlibSourceSetHierarchyTemplate)
 
     android {
-        namespace = "io.github.xephosbot.tdlib"
+        namespace = "io.xbot.tdlib"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
 
@@ -105,6 +105,13 @@ ctx.configureAndroidTarget(mapOf(
     "armeabi-v7a"  to androidArm32ExtractTask,
     "x86"          to androidX86ExtractTask,
 ))
+
+// Wire Android jniLibs from extracted archives
+android {
+    sourceSets.getByName("main") {
+        jniLibs.srcDir(file("libs"))
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Maven publish
