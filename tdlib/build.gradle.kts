@@ -3,47 +3,44 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
+    alias(libs.plugins.android.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.kmp.library)
-    id("de.undercouch.download")
+    alias(libs.plugins.gradle.download.task)
+    id("tdlib-convention")
     `maven-publish`
 }
 
 val tdlibVersion = project.property("tdlib.version") as String
-group = "io.github.xephosbot"
+group = "io.xbot"
 version = tdlibVersion
 
-// ---------------------------------------------------------------------------
-// TDLib native artifact download & extraction
-// ---------------------------------------------------------------------------
 val tdlibDeps = TdlibDependencies(project, tdlibVersion)
 
 val jniExtractTask = tdlibDeps.jniForHost()
 
-val iosArm64ExtractTask      = tdlibDeps.nativeFor(TdlibOS.IOS, TdlibArch.Arm64)
-val iosSimArm64ExtractTask   = tdlibDeps.nativeFor(TdlibOS.IOS, TdlibArch.Arm64, isSimulator = true)
-val macosArm64ExtractTask    = tdlibDeps.nativeFor(TdlibOS.MacOS, TdlibArch.Arm64)
-val macosX64ExtractTask      = tdlibDeps.nativeFor(TdlibOS.MacOS, TdlibArch.X64)
-val linuxX64ExtractTask      = tdlibDeps.nativeFor(TdlibOS.Linux, TdlibArch.X64)
-val linuxArm64ExtractTask    = tdlibDeps.nativeFor(TdlibOS.Linux, TdlibArch.Arm64)
+val iosArm64ExtractTask = tdlibDeps.nativeFor(TdlibOS.IOS, TdlibArch.Arm64)
+val iosSimArm64ExtractTask = tdlibDeps.nativeFor(TdlibOS.IOS, TdlibArch.Arm64, isSimulator = true)
+val macosArm64ExtractTask = tdlibDeps.nativeFor(TdlibOS.MacOS, TdlibArch.Arm64)
+val macosX64ExtractTask = tdlibDeps.nativeFor(TdlibOS.MacOS, TdlibArch.X64)
+val linuxX64ExtractTask = tdlibDeps.nativeFor(TdlibOS.Linux, TdlibArch.X64)
+val linuxArm64ExtractTask = tdlibDeps.nativeFor(TdlibOS.Linux, TdlibArch.Arm64)
 
-// Android ABIs
-val androidArm64ExtractTask  = tdlibDeps.androidFor("arm64-v8a")
-val androidArm32ExtractTask  = tdlibDeps.androidFor("armeabi-v7a")
-val androidX86ExtractTask    = tdlibDeps.androidFor("x86")
+val androidArm64ExtractTask = tdlibDeps.androidFor("arm64-v8a")
+val androidArm32ExtractTask = tdlibDeps.androidFor("armeabi-v7a")
+val androidX86ExtractTask = tdlibDeps.androidFor("x86")
+val androidX86_64ExtractTask = tdlibDeps.androidFor("x86_64")
 
-// ---------------------------------------------------------------------------
-// Kotlin Multiplatform configuration
-// ---------------------------------------------------------------------------
 kotlin {
     applyHierarchyTemplate(tdlibSourceSetHierarchyTemplate)
 
     android {
-        namespace = "io.xbot.tdlib"
-        compileSdk = libs.versions.compileSdk.get().toInt()
-        minSdk = libs.versions.minSdk.get().toInt()
-
-        publishLibraryVariants("release")
+        namespace = "com.xbot.tdlib"
+        compileSdk {
+            version = release(libs.versions.android.compilesdk.get().toInt()) {
+                minorApiLevel = 1
+            }
+        }
+        minSdk = libs.versions.android.minsdk.get().toInt()
     }
 
     jvm()
@@ -61,14 +58,8 @@ kotlin {
     }
 }
 
-// ---------------------------------------------------------------------------
-// TdlibProjectContext
-// ---------------------------------------------------------------------------
 val ctx = TdlibProjectContext(project, kotlin, tdlibDeps, tdlibVersion)
 
-// ---------------------------------------------------------------------------
-// Native targets: cinterop + static linking
-// ---------------------------------------------------------------------------
 data class NativeTargetDef(
     val name: String,
     val os: TdlibOS,
@@ -78,12 +69,12 @@ data class NativeTargetDef(
 )
 
 val nativeTargets = listOf(
-    NativeTargetDef("iosArm64",          TdlibOS.IOS,   TdlibArch.Arm64, iosArm64ExtractTask),
-    NativeTargetDef("iosSimulatorArm64", TdlibOS.IOS,   TdlibArch.Arm64, iosSimArm64ExtractTask, isSimulator = true),
-    NativeTargetDef("macosArm64",        TdlibOS.MacOS, TdlibArch.Arm64, macosArm64ExtractTask),
-    NativeTargetDef("macosX64",          TdlibOS.MacOS, TdlibArch.X64,   macosX64ExtractTask),
-    NativeTargetDef("linuxX64",          TdlibOS.Linux, TdlibArch.X64,   linuxX64ExtractTask),
-    NativeTargetDef("linuxArm64",        TdlibOS.Linux, TdlibArch.Arm64, linuxArm64ExtractTask),
+    NativeTargetDef("iosArm64", TdlibOS.IOS, TdlibArch.Arm64, iosArm64ExtractTask),
+    NativeTargetDef("iosSimulatorArm64", TdlibOS.IOS, TdlibArch.Arm64, iosSimArm64ExtractTask, isSimulator = true),
+    NativeTargetDef("macosArm64", TdlibOS.MacOS, TdlibArch.Arm64, macosArm64ExtractTask),
+    NativeTargetDef("macosX64", TdlibOS.MacOS, TdlibArch.X64,   macosX64ExtractTask),
+    NativeTargetDef("linuxX64", TdlibOS.Linux, TdlibArch.X64,   linuxX64ExtractTask),
+    NativeTargetDef("linuxArm64", TdlibOS.Linux, TdlibArch.Arm64, linuxArm64ExtractTask),
 )
 
 nativeTargets.forEach { def ->
@@ -92,33 +83,18 @@ nativeTargets.forEach { def ->
     ctx.wireNativeExtractTask(def.extractTask, target)
 }
 
-// ---------------------------------------------------------------------------
-// JVM target: JNI shared library loading
-// ---------------------------------------------------------------------------
 ctx.configureJvmTarget(jniExtractTask)
 
-// ---------------------------------------------------------------------------
-// Android target: wire extract tasks
-// ---------------------------------------------------------------------------
 ctx.configureAndroidTarget(mapOf(
-    "arm64-v8a"    to androidArm64ExtractTask,
-    "armeabi-v7a"  to androidArm32ExtractTask,
-    "x86"          to androidX86ExtractTask,
+    "arm64-v8a" to androidArm64ExtractTask,
+    "armeabi-v7a" to androidArm32ExtractTask,
+    "x86" to androidX86ExtractTask,
+    "x86_64" to androidX86_64ExtractTask,
 ))
 
-// Wire Android jniLibs from extracted archives
-android {
-    sourceSets.getByName("main") {
-        jniLibs.srcDir(file("libs"))
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Maven publish
-// ---------------------------------------------------------------------------
 publishing {
     publications.withType<MavenPublication> {
-        groupId = "io.github.xephosbot"
+        groupId = "io.xbot"
         artifactId = "tdlib-kmp-${name}"
         version = tdlibVersion
 

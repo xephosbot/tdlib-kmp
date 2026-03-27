@@ -4,8 +4,10 @@ import io.xbot.tdlib.cinterop.td_create_client_id
 import io.xbot.tdlib.cinterop.td_execute
 import io.xbot.tdlib.cinterop.td_receive
 import io.xbot.tdlib.cinterop.td_send
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
 
+@OptIn(ExperimentalForeignApi::class)
 internal actual object NativeBridge {
     actual fun createClientId(): Int = td_create_client_id()
     actual fun send(clientId: Int, request: String) { td_send(clientId, request) }

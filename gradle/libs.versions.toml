@@ -1,11 +1,22 @@
 [versions]
-kotlin = "2.2.20"
+# Android
+android-minsdk = "24"
+android-targetsdk = "36"
+android-compilesdk = "36"
 android-gradle-plugin = "9.1.0"
-compileSdk = "36"
-minSdk = "24"
-gradleDownloadTask = "5.7.0"
+
+# Kotlin
+kotlin = "2.3.20"
+
+# Utils
+gradle-download-task = "5.7.0"
+
+[libraries]
+kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "android-gradle-plugin" }
+gradle-download-task-gradle-plugin = { module = "de.undercouch:gradle-download-task", version.ref = "gradle-download-task" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-android-kmp-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "android-gradle-plugin" }
-download = { id = "de.undercouch.download", version.ref = "gradleDownloadTask" }
+android-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "android-gradle-plugin" }
+gradle-download-task = { id = "de.undercouch.download", version.ref = "gradle-download-task" }
