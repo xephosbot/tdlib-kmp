@@ -1,12 +1,12 @@
-package org.xephosbot.tdlib
+package io.github.xephosbot.tdlib
 
 /**
  * Main entry point for the TDLib JSON Client API.
  *
  * All calls are delegated to [NativeBridge], which is implemented per-platform:
  * - Kotlin/Native: cinterop bindings to `td_json_client.h`
- * - JVM: JNI via `libtdjni`
- * - Android: JNI via `libtdjni`
+ * - JVM: JNI via `libtdjson`
+ * - Android: JNI via `libtdjsonjava`
  */
 object TdLib {
     /** Creates a new TDLib client and returns its unique identifier. */

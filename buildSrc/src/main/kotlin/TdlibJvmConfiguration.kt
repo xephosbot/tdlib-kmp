@@ -7,8 +7,8 @@ import org.gradle.kotlin.dsl.register
  * Analogous to `JvmTasksConfiguration.kt` in JetBrains/skiko.
  *
  * JVM target:
- *   Packages the host-OS JNI shared library (`libtdjni.so` / `libtdjni.dylib`
- *   / `tdjni.dll`) into the JVM JAR under `native/{os-arch}/`.
+ *   Packages the host-OS JNI shared library (`libtdjson.so` / `libtdjson.dylib`
+ *   / `tdjson.dll`) into the JVM JAR under `native/{os-arch}/`.
  *   At runtime [TdLibLoader] extracts it from the classpath.
  *
  * Android target:
@@ -21,7 +21,7 @@ import org.gradle.kotlin.dsl.register
  * Registers a Jar task that bundles the host-OS JNI shared library as a
  * classpath resource.
  *
- * The file is placed at `native/{os-arch}/libtdjni.{ext}` inside the JAR.
+ * The file is placed at `native/{os-arch}/libtdjson.{ext}` inside the JAR.
  */
 fun TdlibProjectContext.configureJvmTarget(jniExtractTask: String) = with(project) {
     val jniLibsDir = file("libs/${jniLocalDir()}")

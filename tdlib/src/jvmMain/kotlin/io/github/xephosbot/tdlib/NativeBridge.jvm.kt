@@ -1,9 +1,9 @@
-package org.xephosbot.tdlib
+package io.github.xephosbot.tdlib
 
 /**
  * JVM implementation of [NativeBridge].
  *
- * Loads the JNI shared library (`libtdjni.so` / `libtdjni.dylib` / `tdjni.dll`)
+ * Loads the JNI shared library (`libtdjson.so` / `libtdjson.dylib` / `tdjson.dll`)
  * via [TdLibLoader] which extracts it from the classpath JAR at runtime,
  * similar to how JetBrains/skiko loads `libskiko`.
  */

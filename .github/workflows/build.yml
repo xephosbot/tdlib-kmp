@@ -18,8 +18,6 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Download TDLib artifacts
-        run: ./gradlew :tdlib:downloadAllTdlib
       - name: Build Linux targets
         run: ./gradlew :tdlib:linuxX64MainKlibrary :tdlib:linuxArm64MainKlibrary :tdlib:compileKotlinJvm
       - name: Run JVM tests
@@ -34,8 +32,6 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Download TDLib artifacts
-        run: ./gradlew :tdlib:downloadAllTdlib
       - name: Build macOS targets
         run: ./gradlew :tdlib:macosArm64MainKlibrary :tdlib:macosX64MainKlibrary
       - name: Build iOS targets
@@ -50,7 +46,5 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Download TDLib artifacts
-        run: ./gradlew :tdlib:downloadAllTdlib
       - name: Build JVM target
         run: ./gradlew :tdlib:compileKotlinJvm

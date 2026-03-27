@@ -8,8 +8,8 @@ Architecture inspired by [JetBrains/skiko](https://github.com/JetBrains/skiko).
 
 | Platform | Target | Linking |
 |----------|--------|---------|
-| Android  | `arm64-v8a` | JNI shared (`libtdjni.so`) |
-| JVM      | host OS | JNI shared (extracted from classpath) |
+| Android  | `arm64-v8a`, `armeabi-v7a`, `x86` | JNI shared (`libtdjsonjava.so`) |
+| JVM      | host OS | JNI shared (`libtdjson`, extracted from classpath) |
 | iOS      | `arm64`, `simulatorArm64` | cinterop + static |
 | macOS    | `arm64`, `x64` | cinterop + static |
 | Linux    | `x64`, `arm64` | cinterop + static |
@@ -31,15 +31,15 @@ tdlib-kmp/
 ├── tdlib/                              — Core library module
 │   ├── build.gradle.kts
 │   └── src/
-│       ├── commonMain/kotlin/org/xephosbot/tdlib/
+│       ├── commonMain/kotlin/io/github/xephosbot/tdlib/
 │       │   ├── TdLib.kt                — Public API
 │       │   └── NativeBridge.kt         — expect declarations
-│       ├── nativeMain/kotlin/org/xephosbot/tdlib/
+│       ├── nativeMain/kotlin/io/github/xephosbot/tdlib/
 │       │   └── NativeBridge.native.kt  — cinterop implementation
-│       ├── jvmMain/kotlin/org/xephosbot/tdlib/
+│       ├── jvmMain/kotlin/io/github/xephosbot/tdlib/
 │       │   ├── NativeBridge.jvm.kt     — JNI implementation
 │       │   └── TdLibLoader.kt          — Native lib extractor/loader
-│       ├── androidMain/kotlin/org/xephosbot/tdlib/
+│       ├── androidMain/kotlin/io/github/xephosbot/tdlib/
 │       │   └── NativeBridge.android.kt — Android JNI implementation
 │       └── commonTest/kotlin/
 │           └── TdLibTest.kt            — Shared tests
@@ -52,12 +52,12 @@ tdlib-kmp/
 
 ```kotlin
 dependencies {
-    implementation("org.xephosbot:tdlib-kmp:<version>")
+    implementation("io.github.xephosbot:tdlib-kmp:<version>")
 }
 ```
 
 ```kotlin
-import org.xephosbot.tdlib.TdLib
+import io.github.xephosbot.tdlib.TdLib
 
 val clientId = TdLib.createClientId()
 TdLib.send(clientId, """{"@type":"getOption","name":"version"}""")
@@ -68,10 +68,7 @@ val syncResult = TdLib.execute("""{"@type":"getOption","name":"version"}""")
 ## Building
 
 ```bash
-# Download all TDLib native artifacts
-./gradlew :tdlib:downloadAllTdlib
-
-# Build all targets
+# Build all targets (dependencies are downloaded lazily)
 ./gradlew :tdlib:build
 ```
 

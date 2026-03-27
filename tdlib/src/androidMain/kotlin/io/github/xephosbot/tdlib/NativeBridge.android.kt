@@ -1,14 +1,14 @@
-package org.xephosbot.tdlib
+package io.github.xephosbot.tdlib
 
 /**
  * Android implementation of [NativeBridge].
  *
- * On Android the shared library (`libtdjni.so`) is bundled inside the APK
+ * On Android the shared library (`libtdjsonjava.so`) is bundled inside the APK
  * under `lib/{abi}/` and loaded via [System.loadLibrary].
  */
 internal actual object NativeBridge {
     init {
-        System.loadLibrary("tdjni")
+        System.loadLibrary("tdjsonjava")
     }
 
     actual fun createClientId(): Int = nativeCreateClientId()

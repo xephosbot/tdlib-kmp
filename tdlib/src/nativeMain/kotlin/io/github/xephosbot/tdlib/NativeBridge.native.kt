@@ -1,10 +1,10 @@
-package org.xephosbot.tdlib
+package io.github.xephosbot.tdlib
 
+import io.github.xephosbot.tdlib.cinterop.td_create_client_id
+import io.github.xephosbot.tdlib.cinterop.td_execute
+import io.github.xephosbot.tdlib.cinterop.td_receive
+import io.github.xephosbot.tdlib.cinterop.td_send
 import kotlinx.cinterop.toKString
-import tdjson.td_create_client_id
-import tdjson.td_execute
-import tdjson.td_receive
-import tdjson.td_send
 
 internal actual object NativeBridge {
     actual fun createClientId(): Int = td_create_client_id()

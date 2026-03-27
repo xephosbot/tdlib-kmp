@@ -10,18 +10,16 @@ plugins {
 }
 
 val tdlibVersion = project.property("tdlib.version") as String
-group = "org.xephosbot"
+group = "io.github.xephosbot"
 version = tdlibVersion
 
 // ---------------------------------------------------------------------------
-// TDLib native artifact download & extraction (Skiko-style lazy approach)
+// TDLib native artifact download & extraction
 // ---------------------------------------------------------------------------
 val tdlibDeps = TdlibDependencies(project, tdlibVersion)
 
-// JNI for current host (used by JVM target at test/run time)
 val jniExtractTask = tdlibDeps.jniForHost()
 
-// Native targets — register downloads (tasks execute only when depended upon)
 val iosArm64ExtractTask      = tdlibDeps.nativeFor(TdlibOS.IOS, TdlibArch.Arm64)
 val iosSimArm64ExtractTask   = tdlibDeps.nativeFor(TdlibOS.IOS, TdlibArch.Arm64, isSimulator = true)
 val macosArm64ExtractTask    = tdlibDeps.nativeFor(TdlibOS.MacOS, TdlibArch.Arm64)
@@ -31,13 +29,8 @@ val linuxArm64ExtractTask    = tdlibDeps.nativeFor(TdlibOS.Linux, TdlibArch.Arm6
 
 // Android ABIs
 val androidArm64ExtractTask  = tdlibDeps.androidFor("arm64-v8a")
-
-// Convenience: download everything
-tasks.register("downloadAllTdlib") {
-    group = "tdlib"
-    description = "Download and extract all TDLib native artifacts"
-    dependsOn(tasks.matching { it.name.startsWith("extractTdlib") })
-}
+val androidArm32ExtractTask  = tdlibDeps.androidFor("armeabi-v7a")
+val androidX86ExtractTask    = tdlibDeps.androidFor("x86")
 
 // ---------------------------------------------------------------------------
 // Kotlin Multiplatform configuration
@@ -46,7 +39,7 @@ kotlin {
     applyHierarchyTemplate(tdlibSourceSetHierarchyTemplate)
 
     android {
-        namespace = "org.xephosbot.tdlib"
+        namespace = "io.github.xephosbot.tdlib"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
 
@@ -69,7 +62,7 @@ kotlin {
 }
 
 // ---------------------------------------------------------------------------
-// TdlibProjectContext — central build configuration
+// TdlibProjectContext
 // ---------------------------------------------------------------------------
 val ctx = TdlibProjectContext(project, kotlin, tdlibDeps, tdlibVersion)
 
@@ -107,14 +100,18 @@ ctx.configureJvmTarget(jniExtractTask)
 // ---------------------------------------------------------------------------
 // Android target: wire extract tasks
 // ---------------------------------------------------------------------------
-ctx.configureAndroidTarget(mapOf("arm64-v8a" to androidArm64ExtractTask))
+ctx.configureAndroidTarget(mapOf(
+    "arm64-v8a"    to androidArm64ExtractTask,
+    "armeabi-v7a"  to androidArm32ExtractTask,
+    "x86"          to androidX86ExtractTask,
+))
 
 // ---------------------------------------------------------------------------
-// Maven publish — per-platform artifacts
+// Maven publish
 // ---------------------------------------------------------------------------
 publishing {
     publications.withType<MavenPublication> {
-        groupId = "org.xephosbot"
+        groupId = "io.github.xephosbot"
         artifactId = "tdlib-kmp-${name}"
         version = tdlibVersion
 
