@@ -1,11 +1,12 @@
 package org.example.tdlib
 
+import tdjson.td_create_client_id
+
 actual object TdLib {
     actual fun platform(): String = "native"
 
     actual fun load(): Boolean {
-        // Здесь будет реальный вызов через cinterop к tdjson/libtdjson.a.
-        return false
+        return runCatching { td_create_client_id() }.isSuccess
     }
 }
 

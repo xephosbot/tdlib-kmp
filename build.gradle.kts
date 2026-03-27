@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kmp.library)
@@ -52,13 +54,38 @@ kotlin {
     linuxX64()
     linuxArm64()
 
+    // -----------------------------------------------------------------
+    // cinterop: bind TDLib C headers & link static libraries
+    // -----------------------------------------------------------------
+    val nativeLibDirs = mapOf(
+        "iosArm64"            to "ios-arm64",
+        "iosSimulatorArm64"   to "ios-arm64-simulator",
+        "macosArm64"          to "macos-arm64",
+        "macosX64"            to "macos-x86_64",
+        "linuxX64"            to "linux-x86_64",
+        "linuxArm64"          to "linux-arm64",
+    )
+
+    targets.withType<KotlinNativeTarget> {
+        val libDir = nativeLibDirs[name] ?: return@withType
+        compilations.getByName("main") {
+            cinterops {
+                val tdjson by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/tdjson.def"))
+                    compilerOpts("-I${project.file("libs/$libDir/include")}")
+                    extraOpts("-libraryPath", project.file("libs/$libDir/lib").absolutePath)
+                }
+            }
+        }
+    }
+
     sourceSets {
 
     }
 }
 
 // ---------------------------------------------------------------------------
-// Wire download tasks as dependencies of compilation
+// Wire download tasks as dependencies of compilation & cinterop
 // ---------------------------------------------------------------------------
 tasks.matching { it.name == "compileKotlinJvm" }.configureEach {
     dependsOn(jniExtractTask)
@@ -86,4 +113,18 @@ tasks.matching { it.name == "compileKotlinLinuxX64" }.configureEach {
 
 tasks.matching { it.name == "compileKotlinLinuxArm64" }.configureEach {
     dependsOn(linuxArm64ExtractTask)
+}
+
+// cinterop tasks must run after native artifacts are extracted
+mapOf(
+    "cinteropTdjsonIosArm64"          to iosArm64ExtractTask,
+    "cinteropTdjsonIosSimulatorArm64" to iosSimArm64ExtractTask,
+    "cinteropTdjsonMacosArm64"        to macosArm64ExtractTask,
+    "cinteropTdjsonMacosX64"          to macosX64ExtractTask,
+    "cinteropTdjsonLinuxX64"          to linuxX64ExtractTask,
+    "cinteropTdjsonLinuxArm64"        to linuxArm64ExtractTask,
+).forEach { (cinteropTask, extractTask) ->
+    tasks.matching { it.name == cinteropTask }.configureEach {
+        dependsOn(extractTask)
+    }
 }
