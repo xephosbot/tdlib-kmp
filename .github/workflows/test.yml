@@ -18,11 +18,11 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Download TDLib artifacts
-        run: ./gradlew downloadAllTdlib
+        run: ./gradlew :tdlib:downloadAllTdlib
       - name: Run Linux native tests
-        run: ./gradlew linuxX64Test
+        run: ./gradlew :tdlib:linuxX64Test
       - name: Run JVM tests
-        run: ./gradlew jvmTest
+        run: ./gradlew :tdlib:jvmTest
 
   test-macos:
     runs-on: macos-latest
@@ -34,8 +34,8 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Download TDLib artifacts
-        run: ./gradlew downloadAllTdlib
+        run: ./gradlew :tdlib:downloadAllTdlib
       - name: Run macOS native tests
-        run: ./gradlew macosArm64Test
+        run: ./gradlew :tdlib:macosArm64Test
       - name: Run iOS simulator tests
-        run: ./gradlew iosSimulatorArm64Test
+        run: ./gradlew :tdlib:iosSimulatorArm64Test

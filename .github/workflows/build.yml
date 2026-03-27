@@ -19,11 +19,11 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Download TDLib artifacts
-        run: ./gradlew downloadAllTdlib
+        run: ./gradlew :tdlib:downloadAllTdlib
       - name: Build Linux targets
-        run: ./gradlew linuxX64MainKlibrary linuxArm64MainKlibrary compileKotlinJvm
+        run: ./gradlew :tdlib:linuxX64MainKlibrary :tdlib:linuxArm64MainKlibrary :tdlib:compileKotlinJvm
       - name: Run JVM tests
-        run: ./gradlew jvmTest
+        run: ./gradlew :tdlib:jvmTest
 
   build-macos:
     runs-on: macos-latest
@@ -35,11 +35,11 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Download TDLib artifacts
-        run: ./gradlew downloadAllTdlib
+        run: ./gradlew :tdlib:downloadAllTdlib
       - name: Build macOS targets
-        run: ./gradlew macosArm64MainKlibrary macosX64MainKlibrary
+        run: ./gradlew :tdlib:macosArm64MainKlibrary :tdlib:macosX64MainKlibrary
       - name: Build iOS targets
-        run: ./gradlew iosArm64MainKlibrary iosSimulatorArm64MainKlibrary
+        run: ./gradlew :tdlib:iosArm64MainKlibrary :tdlib:iosSimulatorArm64MainKlibrary
 
   build-windows:
     runs-on: windows-latest
@@ -51,6 +51,6 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Download TDLib artifacts
-        run: ./gradlew downloadAllTdlib
+        run: ./gradlew :tdlib:downloadAllTdlib
       - name: Build JVM target
-        run: ./gradlew compileKotlinJvm
+        run: ./gradlew :tdlib:compileKotlinJvm

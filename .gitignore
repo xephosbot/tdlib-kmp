@@ -25,7 +25,7 @@ local.properties
 # ========================
 # TDLib downloaded native artifacts (re-downloaded by build)
 # ========================
-/libs/
+**/libs/
 
 # ========================
 # Android
