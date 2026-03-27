@@ -1,0 +1,49 @@
+# ========================
+# Gradle
+# ========================
+.gradle/
+build/
+buildSrc/build/
+
+# ========================
+# Kotlin
+# ========================
+.kotlin/
+
+# ========================
+# IDE — IntelliJ / Android Studio
+# ========================
+.idea/
+*.iml
+.DS_Store
+
+# ========================
+# Local properties (SDK paths, tokens, etc.)
+# ========================
+local.properties
+
+# ========================
+# TDLib downloaded native artifacts (re-downloaded by build)
+# ========================
+/libs/
+
+# ========================
+# Android
+# ========================
+.externalNativeBuild/
+.cxx/
+/captures/
+
+# ========================
+# Kotlin/Native
+# ========================
+*.klib
+*.knm
+
+# ========================
+# OS junk
+# ========================
+Thumbs.db
+Desktop.ini
+*.swp
+*~

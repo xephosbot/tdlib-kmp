@@ -1,0 +1,11 @@
+[versions]
+kotlin = "2.2.20"
+android-gradle-plugin = "9.1.0"
+compileSdk = "36"
+minSdk = "24"
+gradleDownloadTask = "5.7.0"
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+android-kmp-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "android-gradle-plugin" }
+download = { id = "de.undercouch.download", version.ref = "gradleDownloadTask" }
