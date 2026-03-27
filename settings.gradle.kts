@@ -31,4 +31,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "tdlib-kmp"
+
+include(":tdlib")
  

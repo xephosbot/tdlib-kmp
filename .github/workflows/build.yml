@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build Linux targets
+        run: ./gradlew :tdlib:linuxX64MainKlibrary :tdlib:linuxArm64MainKlibrary :tdlib:compileKotlinJvm
+      - name: Run JVM tests
+        run: ./gradlew :tdlib:jvmTest
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build macOS targets
+        run: ./gradlew :tdlib:macosArm64MainKlibrary :tdlib:macosX64MainKlibrary
+      - name: Build iOS targets
+        run: ./gradlew :tdlib:iosArm64MainKlibrary :tdlib:iosSimulatorArm64MainKlibrary
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build JVM target
+        run: ./gradlew :tdlib:compileKotlinJvm
