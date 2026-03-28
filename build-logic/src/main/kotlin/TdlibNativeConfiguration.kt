@@ -11,13 +11,16 @@ private val TDLIB_STATIC_LIBS = listOf(
     "libtdjson_private.a",
     "libtdclient.a",
     "libtdcore.a",
+    "libtdapi.a",
+    "libtdactor.a",
+    "libtdutils.a",
     "libtddb.a",
     "libtdsqlite.a",
     "libtdnet.a",
-    "libtdactor.a",
-    "libtdutils.a",
-    "libssl.a",
+    "libtdmtproto.a",
+    "libtde2e.a",
     "libcrypto.a",
+    "libssl.a",
 )
 
 /**

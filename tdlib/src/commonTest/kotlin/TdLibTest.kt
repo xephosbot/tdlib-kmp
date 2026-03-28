@@ -15,6 +15,7 @@ class TdLibTest {
     fun testExecute() {
         val result = TdLib.execute("""{"@type":"getOption","name":"version"}""")
         assertNotNull(result, "execute() must return a non-null result")
-        assertTrue(result.contains("version"), "Result must contain 'version': $result")
+        assertTrue(result.contains("optionValueString"), "Result type must be 'optionValueString': $result")
+        assertTrue(result.contains("value"), "Result must contain 'value' field: $result")
     }
 }
