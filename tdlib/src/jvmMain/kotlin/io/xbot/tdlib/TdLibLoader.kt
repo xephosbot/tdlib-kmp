@@ -8,7 +8,7 @@ internal object TdLibLoader {
     @Synchronized
     fun load() {
         if (loaded) return
-        val libName = System.mapLibraryName("tdjson")
+        val libName = System.mapLibraryName("tdjsonjava")
         val resourceDir = osResourceDir()
         val resourcePath = "/native/$resourceDir/lib/$libName"
         val stream = TdLibLoader::class.java.getResourceAsStream(resourcePath)
@@ -21,7 +21,7 @@ internal object TdLibLoader {
             }
             System.load(tempFile.absolutePath)
         } else {
-            System.loadLibrary("tdjson")
+            System.loadLibrary("tdjsonjava")
         }
         loaded = true
     }
