@@ -2,11 +2,11 @@ package io.xbot.tdlib
 
 import java.io.File
 
-internal object TdLibLoader {
+internal actual object TdLibLoader {
     @Volatile private var loaded = false
 
     @Synchronized
-    fun load() {
+    actual fun load() {
         if (loaded) return
         val libName = System.mapLibraryName("tdjsonjava")
         val resourceDir = osResourceDir()
