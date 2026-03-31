@@ -13,10 +13,9 @@ import java.io.File
  * Release URL pattern:
  *   https://github.com/xephosbot/td-pack/releases/download/v{version}/{asset}.tar.gz
  *
- * Archive layout (root directory is stripped on extraction):
- *   tdlib-ios-arm64/
- *     include/ …
- *     lib/ …
+ * Archive layout:
+ *   include/ …
+ *   lib/ …
  */
 class TdlibDependencies(
     private val project: Project,
@@ -82,13 +81,7 @@ class TdlibDependencies(
                 group = "tdlib"
                 description = "Extract $assetName → libs/$localDir"
                 dependsOn(dlTask)
-                from(project.tarTree(project.layout.buildDirectory.file("downloads/$assetName.tar.gz"))) {
-                    eachFile {
-                        // strip root dir inside archive (e.g. "tdlib-ios-arm64/")
-                        relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
-                    }
-                    includeEmptyDirs = false
-                }
+                from(project.tarTree(project.layout.buildDirectory.file("downloads/$assetName.tar.gz")))
                 into(targetDir)
                 onlyIf { !targetDir.exists() || targetDir.listFiles().isNullOrEmpty() }
             }

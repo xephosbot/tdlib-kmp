@@ -27,10 +27,26 @@ import org.gradle.kotlin.dsl.register
  */
 fun TdlibProjectContext.configureJvmTarget(jniExtractTask: String) = with(project) {
     val jniLibsDir = file("libs/${jniLocalDir()}")
+    val resourceLayout = "native/${hostOs.id}-${nativeArchId()}"
+    val jniResourcesDir = layout.buildDirectory.dir("jvmJniResources")
 
-    // Add JNI shared library to JVM resources so it's included in the published JAR
+    // Copy JNI library into the expected classpath resource layout:
+    //   build/jvmJniResources/native/{os-arch}/lib/libtdjson.{ext}
+    // This matches the path TdLibLoader looks up at runtime.
+    val stageJniTask = tasks.register<Copy>("stageJvmJniResources") {
+        group = "tdlib"
+        description = "Stage JNI library in classpath resource layout for run/test"
+        dependsOn(jniExtractTask)
+        from(jniLibsDir) {
+            include("lib/**")
+            into(resourceLayout)
+        }
+        into(jniResourcesDir)
+    }
+
+    // Add staged resources so both run/test and published JAR include the library.
     kotlin.sourceSets.getByName("jvmMain") {
-        resources.srcDir(jniLibsDir)
+        resources.srcDir(jniResourcesDir)
     }
 
     // --- Pack JNI library into standalone classifier JAR --------------------------------
@@ -38,19 +54,16 @@ fun TdlibProjectContext.configureJvmTarget(jniExtractTask: String) = with(projec
         group = "tdlib"
         description = "Packages host JNI library into JVM resources"
         archiveClassifier.set("jni-${hostOs.id}-${hostArch.id}")
-        dependsOn(jniExtractTask)
-        from(jniLibsDir) {
-            include("lib/**")
-            into("native/${hostOs.id}-${nativeArchId()}")
-        }
+        dependsOn(stageJniTask)
+        from(jniResourcesDir)
     }
 
-    // Wire JVM compile to depend on JNI extraction.
+    // Wire JVM compile and resource processing to depend on staging.
     tasks.matching { it.name == "compileKotlinJvm" }.configureEach {
-        dependsOn(jniExtractTask)
+        dependsOn(stageJniTask)
     }
     tasks.matching { it.name == "jvmProcessResources" }.configureEach {
-        dependsOn(jniExtractTask)
+        dependsOn(stageJniTask)
     }
 }
 

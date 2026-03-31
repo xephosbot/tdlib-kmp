@@ -24,22 +24,28 @@ abstract class WriteTdlibCInteropDef : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val file = outputFile.get().asFile
-        file.parentFile.mkdirs()
-        file.bufferedWriter().use { w ->
-            w.appendLine("package = io.xbot.tdlib.cinterop")
-            w.appendLine("headers = td_json_client.h td_log.h")
-            w.appendLine("headerFilter = td_json_client.h td_log.h td/telegram/**")
+        val newContent = buildString {
+            appendLine("package = io.xbot.tdlib.cinterop")
+            appendLine("headers = td_json_client.h td_log.h")
+            appendLine("headerFilter = td_json_client.h td_log.h td/telegram/**")
 
             val hpaths = headerPaths.get()
             if (hpaths.isNotEmpty()) {
-                w.appendLine("compilerOpts = ${hpaths.joinToString(" ") { "-I$it" }}")
+                appendLine("compilerOpts = ${hpaths.joinToString(" ") { "-I$it" }}")
             }
 
             val lopts = linkerOpts.get()
             if (lopts.isNotEmpty()) {
-                w.appendLine("linkerOpts = ${lopts.joinToString(" ")}")
+                appendLine("linkerOpts = ${lopts.joinToString(" ")}")
             }
+        }
+
+        val file = outputFile.get().asFile
+        // Only write if content actually changed — keeps the file timestamp stable
+        // so downstream cinteropTdjson* tasks remain UP-TO-DATE when nothing changed.
+        if (!file.exists() || file.readText() != newContent) {
+            file.parentFile.mkdirs()
+            file.writeText(newContent)
         }
     }
 }

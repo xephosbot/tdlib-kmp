@@ -41,6 +41,12 @@ kotlin {
             }
         }
         minSdk = libs.versions.android.minsdk.get().toInt()
+
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
     }
 
     jvm()
@@ -54,6 +60,12 @@ kotlin {
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
+        }
+        getByName("androidDeviceTest") {
+            dependencies {
+                implementation(libs.androidx.test.runner)
+                implementation(libs.androidx.test.ext.junit)
+            }
         }
     }
 }

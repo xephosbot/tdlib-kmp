@@ -118,8 +118,10 @@ fun TdlibProjectContext.configureNativeTarget(
     }
 
     target.compilations.all {
-        compilerOptions.configure {
-            freeCompilerArgs.addAll(allFlags)
+        compileTaskProvider.configure {
+            compilerOptions {
+                freeCompilerArgs.addAll(allFlags)
+            }
         }
     }
 }
