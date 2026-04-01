@@ -34,7 +34,7 @@ kotlin {
     applyHierarchyTemplate(tdlibSourceSetHierarchyTemplate)
 
     android {
-        namespace = "com.xbot.tdlib"
+        namespace = "io.xbot.tdlib"
         compileSdk {
             version = release(libs.versions.android.compilesdk.get().toInt()) {
                 minorApiLevel = 1
