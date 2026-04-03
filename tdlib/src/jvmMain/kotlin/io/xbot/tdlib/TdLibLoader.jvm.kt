@@ -1,6 +1,7 @@
 package io.xbot.tdlib
 
-import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 internal actual object TdLibLoader {
     @Volatile private var loaded = false
@@ -8,21 +9,22 @@ internal actual object TdLibLoader {
     @Synchronized
     actual fun load() {
         if (loaded) return
+        loadSynchronous()
+    }
+
+    @Synchronized
+    private fun loadSynchronous() {
+        if (loaded) return
         val libName = System.mapLibraryName("tdjsonjava")
-        val resourceDir = osResourceDir()
-        val resourcePath = "/native/$resourceDir/lib/$libName"
-        val stream = TdLibLoader::class.java.getResourceAsStream(resourcePath)
-        if (stream != null) {
-            val tempDir = File(System.getProperty("java.io.tmpdir"), "tdlib-kmp")
-            tempDir.mkdirs()
-            val tempFile = File(tempDir, libName)
-            stream.use { input ->
-                tempFile.outputStream().use { output -> input.copyTo(output) }
+        val tempFile = Files.createTempFile(libName, null).apply { toFile().deleteOnExit() }
+        TdLibLoader::class
+            .java
+            .classLoader!!
+            .getResourceAsStream("natives/${osResourceDir()}/$libName")!!
+            .use { resourceStream ->
+                Files.copy(resourceStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
             }
-            System.load(tempFile.absolutePath)
-        } else {
-            System.loadLibrary("tdjsonjava")
-        }
+        System.load(tempFile.toFile().canonicalPath)
         loaded = true
     }
 
@@ -30,15 +32,15 @@ internal actual object TdLibLoader {
         val os = System.getProperty("os.name").lowercase()
         val arch = archId(System.getProperty("os.arch"))
         return when {
-            os.contains("mac") -> "macos-$arch"
-            os.contains("linux") -> "linux-$arch"
-            os.contains("windows") -> "windows-${if (arch == "arm64") "arm64" else "x64"}"
+            os.contains("mac")     -> "macos_$arch"
+            os.contains("linux")   -> "linux_$arch"
+            os.contains("windows") -> "windows_$arch"
             else -> error("Unsupported OS: $os")
         }
     }
 
     private fun archId(arch: String): String = when (arch) {
         "aarch64", "arm64" -> "arm64"
-        else -> "x86_64"
+        else -> "x64"
     }
 }

@@ -1,122 +1,81 @@
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
+import org.gradle.api.Project
 import org.gradle.api.tasks.Copy
-import org.gradle.api.tasks.bundling.Jar
-import org.gradle.kotlin.dsl.register
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 /**
- * JVM & Android target configuration for TDLib.
+ * Bundles all 6 JNI desktop platform libraries into the JVM JAR resources under:
+ *   natives/{resourcePath}/{libName}
  *
- * Analogous to `JvmTasksConfiguration.kt` in JetBrains/skiko.
- *
- * JVM target:
- *   Packages the host-OS JNI shared library (`libtdjson.so` / `libtdjson.dylib`
- *   / `tdjson.dll`) into the JVM JAR under `native/{os-arch}/`.
- *   At runtime [TdLibLoader] extracts it from the classpath.
- *
- * Android target:
- *   The shared `.so` files go into `jniLibs/{abi}/` automatically via
- *   the Android Gradle Plugin, so we only need to copy the extracted
- *   artifacts to the right place.
+ * At runtime, [TdLibLoader] extracts the appropriate library for the host OS/arch.
  */
-
-/**
- * Registers a Jar task that bundles the host-OS JNI shared library as a
- * classpath resource.
- *
- * The file is placed at `native/{os-arch}/libtdjson.{ext}` inside the JAR.
- */
-fun TdlibProjectContext.configureJvmTarget(jniExtractTask: String) = with(project) {
-    val jniLibsDir = file("libs/${jniLocalDir()}")
-    val resourceLayout = "native/${hostOs.id}-${nativeArchId()}"
+fun configureJvmTarget(project: Project, deps: TdlibDependencies, kotlin: KotlinMultiplatformExtension) = with(project) {
     val jniResourcesDir = layout.buildDirectory.dir("jvmJniResources")
 
-    // Copy JNI library into the expected classpath resource layout:
-    //   build/jvmJniResources/native/{os-arch}/lib/libtdjson.{ext}
-    // This matches the path TdLibLoader looks up at runtime.
-    val stageJniTask = tasks.register<Copy>("stageJvmJniResources") {
-        group = "tdlib"
-        description = "Stage JNI library in classpath resource layout for run/test"
-        dependsOn(jniExtractTask)
-        from(jniLibsDir) {
-            include("lib/**")
-            into(resourceLayout)
-        }
-        into(jniResourcesDir)
+    val stageTasks = TdlibTarget.jniTargets.map { jniTarget ->
+        val extractTask = deps.register(jniTarget)
+        val extractDir = layout.buildDirectory.dir("tdlib/${jniTarget.extractDir}")
+        val suffix = jniTarget.extractDir
+            .split("-")
+            .joinToString("") { it.replaceFirstChar(Char::titlecase) }
+
+        tasks.register("stageJvmJni$suffix", Copy::class.java) {
+            group = "tdlib"
+            description = "Stage ${jniTarget.assetName} JNI library into classpath resource layout"
+            dependsOn(extractTask)
+            from(extractDir.map { it.dir("lib") }) {
+                include("*tdjsonjava*")
+            }
+            into(jniResourcesDir.map { it.dir("natives/${jniTarget.resourcePath}") })
+        }.name
     }
 
-    // Add staged resources so both run/test and published JAR include the library.
     kotlin.sourceSets.getByName("jvmMain") {
         resources.srcDir(jniResourcesDir)
     }
 
-    // --- Pack JNI library into standalone classifier JAR --------------------------------
-    tasks.register<Jar>("jvmJniJar") {
-        group = "tdlib"
-        description = "Packages host JNI library into JVM resources"
-        archiveClassifier.set("jni-${hostOs.id}-${hostArch.id}")
-        dependsOn(stageJniTask)
-        from(jniResourcesDir)
-    }
-
-    // Wire JVM compile and resource processing to depend on staging.
-    tasks.matching { it.name == "compileKotlinJvm" }.configureEach {
-        dependsOn(stageJniTask)
-    }
-    tasks.matching { it.name == "jvmProcessResources" }.configureEach {
-        dependsOn(stageJniTask)
+    tasks.matching { it.name == "compileKotlinJvm" || it.name == "jvmProcessResources" }.configureEach {
+        stageTasks.forEach { dependsOn(it) }
     }
 }
 
 /**
- * Configures Android target: copies `.so` files into the proper `{abi}/` directory
- * layout expected by AGP and registers the folder as a jniLibs source directory so
- * that native libraries are packaged into the AAR.
+ * Copies Android .so files into the jniLibs source directory expected by AGP.
+ *
+ * Android archives are flat (no lib/ subdirectory), so we copy *.so directly
+ * from the extract root into build/androidJniLibs/{abi}/.
  */
-fun TdlibProjectContext.configureAndroidTarget(abis: Map<String, String>) = with(project) {
+fun configureAndroidTarget(project: Project, deps: TdlibDependencies) = with(project) {
     val jniLibsBaseDir = layout.buildDirectory.dir("androidJniLibs")
 
-    // Per-ABI copy tasks: libs/android-{abi}/*.so → build/androidJniLibs/{abi}/*.so
-    val copyTasks = abis.map { (abi, extractTask) ->
-        val suffix = abi.split("-").joinToString("") { it.replaceFirstChar(Char::titlecase) }
-        val taskName = "copyAndroidJniLibs$suffix"
-        tasks.register<Copy>(taskName) {
+    val copyTasks = TdlibTarget.androidTargets.map { androidTarget ->
+        val extractTask = deps.register(androidTarget)
+        val extractDir = layout.buildDirectory.dir("tdlib/${androidTarget.extractDir}")
+        val suffix = androidTarget.extractDir
+            .split("-")
+            .joinToString("") { it.replaceFirstChar(Char::titlecase) }
+
+        tasks.register("copyAndroidJniLibs$suffix", Copy::class.java) {
             group = "tdlib"
-            description = "Copy $abi .so libs for Android AAR"
+            description = "Copy ${androidTarget.resourcePath} .so libs for Android AAR"
             dependsOn(extractTask)
-            from(file("libs/android-$abi")) {
-                include("*.so")
-            }
-            into(jniLibsBaseDir.map { it.dir(abi) })
-        }
-        taskName
+            // Android .so archives are flat (no lib/ subdirectory)
+            from(extractDir) { include("*.so") }
+            into(jniLibsBaseDir.map { it.dir(androidTarget.resourcePath) })
+        }.name
     }
 
-    // Register assembled jniLibs directory with AGP via the Variant API.
     extensions.getByType(KotlinMultiplatformAndroidComponentsExtension::class.java)
         .onVariants { variant ->
-            variant.sources.jniLibs?.addStaticSourceDirectory("build/androidJniLibs")
+            variant.sources.jniLibs?.addStaticSourceDirectory(
+                jniLibsBaseDir.get().asFile.absolutePath
+            )
         }
 
-    // Wire copy tasks before AGP merges JNI libraries.
-    tasks.matching {
-        (it.name.contains("JniLib", ignoreCase = true) && !it.name.startsWith("copyAndroidJniLibs")) ||
-            (it.name.startsWith("compile") && it.name.contains("Android"))
-    }.configureEach {
-        copyTasks.forEach { task -> dependsOn(task) }
+    // Wire copy tasks before AGP merges JNI library folders.
+    tasks.configureEach {
+        if (name.startsWith("merge") && name.endsWith("JniLibFolders")) {
+            copyTasks.forEach { dependsOn(it) }
+        }
     }
-}
-
-private fun jniLocalDir(): String {
-    val archId = when {
-        hostOs == TdlibOS.Windows && hostArch == TdlibArch.X64 -> "x64"
-        hostArch == TdlibArch.X64 -> "x86_64"
-        else -> "arm64"
-    }
-    return "${hostOs.id}-$archId-jni"
-}
-
-private fun nativeArchId(): String = when {
-    hostOs == TdlibOS.Windows && hostArch == TdlibArch.X64 -> "x64"
-    hostArch == TdlibArch.X64 -> "x86_64"
-    else -> "arm64"
 }
