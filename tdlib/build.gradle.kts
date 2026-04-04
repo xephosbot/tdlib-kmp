@@ -11,7 +11,7 @@ plugins {
 }
 
 val tdlibVersion = providers.gradleProperty("tdlib.version").get()
-group = "io.xbot.tdlib"
+group = "io.github.xephosbot"
 version = tdlibVersion
 
 tdlib {
@@ -20,6 +20,10 @@ tdlib {
 
 kotlin {
     applyHierarchyTemplate(tdlibSourceSetHierarchyTemplate)
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
 
     android {
         namespace = "io.xbot.tdlib"
@@ -60,8 +64,11 @@ kotlin {
 }
 
 mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
+
     coordinates(
-        groupId = "io.xbot.tdlib",
+        groupId = "io.github.xephosbot",
         artifactId = "tdlib-kmp",
         version = tdlibVersion
     )
@@ -69,13 +76,32 @@ mavenPublishing {
     pom {
         name.set("tdlib-kmp")
         description.set("TDLib Kotlin Multiplatform library")
+        inceptionYear.set("2026")
         url.set("https://github.com/xephosbot/tdlib-kmp")
 
         licenses {
             license {
                 name.set("Boost Software License 1.0")
                 url.set("https://www.boost.org/LICENSE_1_0.txt")
+                distribution.set("https://www.boost.org/LICENSE_1_0.txt")
             }
+        }
+
+        developers {
+            developer {
+                id.set("xephosbot")
+                name.set("xephosbot")
+                email.set("xephosbot@gmail.com")
+                url.set("https://github.com/xephosbot/")
+                organization.set("xephosbot")
+                organizationUrl.set("https://github.com/xephosbot/")
+            }
+        }
+
+        scm {
+            url.set("https://github.com/xephosbot/tdlib-kmp/")
+            connection.set("scm:git:git://github.com/xephosbot/tdlib-kmp.git")
+            developerConnection.set("scm:git:ssh://git@github.com/xephosbot/tdlib-kmp.git")
         }
     }
 }

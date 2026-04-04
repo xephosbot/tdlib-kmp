@@ -42,20 +42,18 @@ fun TdlibProjectContext.configureJvmTarget(target: KotlinJvmTarget) = with(proje
 
     val stageTasks = JNI_TARGETS.map { tdTarget ->
         val artifactTask = tdlibDeps.jniFor(tdTarget.os, tdTarget.arch)
-        // Libs are extracted to the persistent prebuilds directory
-        val jniLibsDir = rootProject.rootDir.resolve("prebuilds/natives/${tdTarget.jniLocalDir()}")
         // JAR resource path: natives/linux_64, natives/macos_arm64, etc.
         val resourceLayout = tdTarget.jvmResourceDir()
         val suffix = tdTarget.jniLocalDir()
             .split("-")
             .joinToString("") { it.replaceFirstChar(Char::titlecase) }
-            
+
         tasks.register<Copy>("stageJvmJni$suffix") {
             group = "tdlib"
             description = "Stage JNI library in classpath resource layout for run/test"
-            dependsOn(artifactTask)
-            // Copy lib/ contents directly — no extra lib/ nesting in the JAR
-            from(jniLibsDir.resolve("lib")) {
+            // from(Provider<Directory>) establishes an implicit task dependency —
+            // no explicit dependsOn needed.
+            from(artifactTask.flatMap { it.outputDirectory.dir("lib") }) {
                 into(resourceLayout)
             }
             into(jniResourcesDir)
@@ -82,14 +80,15 @@ fun TdlibProjectContext.configureAndroidTarget(target: KotlinMultiplatformAndroi
     val copyTasks = ANDROID_ABIS.map { abi ->
         val suffix = abi.split("-").joinToString("") { it.replaceFirstChar(Char::titlecase) }
         val artifactTask = tdlibDeps.androidFor(abi)
-        
+
         tasks.register<Copy>("copyAndroidJniLibs$suffix") {
             group = "tdlib"
             description = "Copy $abi .so libs for Android AAR"
-            dependsOn(artifactTask)
-            from(rootProject.rootDir.resolve("prebuilds/natives/android-$abi")) { include("*.so") }
+            // from(Provider<Directory>) establishes an implicit task dependency —
+            // no explicit dependsOn needed.
+            from(artifactTask.flatMap { it.outputDirectory }) { include("*.so") }
             into(jniLibsBaseDir.map { it.dir(abi) })
-        }.name
+        }
     }
 
     // Register assembled jniLibs directory with AGP via the Variant API.

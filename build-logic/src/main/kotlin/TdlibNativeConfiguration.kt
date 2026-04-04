@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -79,6 +80,10 @@ fun TdlibProjectContext.configureNativeTarget(target: KotlinNativeTarget) = with
     tasks.withType<CInteropProcess>().configureEach {
         if (konanTarget == target.konanTarget) {
             dependsOn(writeDef, artifactTask)
+            // Track header file contents: if they change (e.g. version upgrade),
+            // cinterop re-runs even though the .def path strings stay the same.
+            inputs.dir(extractDir.resolve("include"))
+                .withPathSensitivity(PathSensitivity.RELATIVE)
         }
     }
 
@@ -92,6 +97,11 @@ fun TdlibProjectContext.configureNativeTarget(target: KotlinNativeTarget) = with
         compileTaskProvider.configure {
             compilerOptions.freeCompilerArgs.addAll(allFlags)
             dependsOn(artifactTask)
+            // freeCompilerArgs carries only path *strings* — Gradle won't notice when
+            // binary content changes (e.g. version upgrade replaces .a files in-place).
+            // Declare the actual binaries as inputs so the task re-runs when they change.
+            inputs.files(TDLIB_STATIC_LIBS.map { extractDir.resolve("lib/$it") })
+                .withPathSensitivity(PathSensitivity.NONE)
         }
     }
 
