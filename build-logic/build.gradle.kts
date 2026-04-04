@@ -4,8 +4,8 @@ plugins {
 
 gradlePlugin {
     plugins {
-        register("tdlib-convention") {
-            id = "tdlib-convention"
+        register("tdlib") {
+            id = libs.plugins.tdlib.convention.get().pluginId
             implementationClass = "TdlibConventionPlugin"
         }
     }

@@ -12,5 +12,4 @@ class TdlibProjectContext(
     val project: Project,
     val kotlin: KotlinMultiplatformExtension,
     val tdlibDeps: TdlibDependencies,
-    val tdlibVersion: String,
 )

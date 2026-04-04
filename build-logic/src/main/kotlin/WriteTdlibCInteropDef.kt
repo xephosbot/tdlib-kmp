@@ -1,6 +1,7 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -12,7 +13,8 @@ import org.gradle.api.tasks.TaskAction
  * The .def is created dynamically so that header paths and linker
  * options can be resolved at configuration time per target.
  */
-abstract class WriteTdlibCInteropDef : DefaultTask() {
+@CacheableTask
+internal abstract class WriteTdlibCInteropDef : DefaultTask() {
     @get:Input
     abstract val headerPaths: ListProperty<String>
 

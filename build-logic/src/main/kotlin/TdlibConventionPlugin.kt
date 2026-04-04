@@ -1,5 +1,12 @@
+import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryTarget
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.kotlin.dsl.create
+import org.gradle.kotlin.dsl.getByType
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
 /**
  * Convention plugin that makes all build-logic classes
@@ -12,11 +19,20 @@ import org.gradle.api.Project
  *   }
  */
 class TdlibConventionPlugin : Plugin<Project> {
-    override fun apply(target: Project) {
-        // This plugin exists primarily to put build-logic classes on the
-        // consumer's classpath.  Actual wiring (TdlibProjectContext creation,
-        // target configuration, etc.) is done explicitly in the module's
-        // build script or can be added here later.
+    override fun apply(target: Project) = with(target) {
+        val ext = extensions.create<TdlibExtension>("tdlib")
+        val kotlin = extensions.getByType<KotlinMultiplatformExtension>()
+
+        val tdlibDeps = TdlibDependencies(project, ext.version)
+        val context = TdlibProjectContext(project, kotlin, tdlibDeps)
+
+        kotlin.targets.all {
+            when (platformType) {
+                KotlinPlatformType.androidJvm -> context.configureAndroidTarget(this as KotlinMultiplatformAndroidLibraryTarget)
+                KotlinPlatformType.jvm -> context.configureJvmTarget(this as KotlinJvmTarget)
+                KotlinPlatformType.native -> context.configureNativeTarget(this as KotlinNativeTarget)
+                else -> { /*Nothing to do*/ }
+            }
+        }
     }
 }
-

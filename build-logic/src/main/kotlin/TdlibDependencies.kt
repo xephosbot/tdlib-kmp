@@ -1,17 +1,11 @@
-import de.undercouch.gradle.tasks.download.Download
 import org.gradle.api.Project
-import org.gradle.api.file.RelativePath
-import org.gradle.api.tasks.Copy
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.TaskProvider
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import java.io.File
 
 /**
  * Manages TDLib native artifact downloads from GitHub releases.
- *
- * Inspired by Skiko: each target lazily downloads only the artifacts
- * it needs — not the entire release.
- *
- * Release URL pattern:
- *   https://github.com/xephosbot/td-pack/releases/download/v{version}/{asset}.tar.gz
  *
  * Archive layout:
  *   include/ …
@@ -19,79 +13,58 @@ import java.io.File
  */
 class TdlibDependencies(
     private val project: Project,
-    private val tdlibVersion: String,
+    private val tdlibVersion: Property<String>,
 ) {
-    private val releaseUrl = "https://github.com/xephosbot/td-pack/releases/download/v$tdlibVersion"
-    private val libsDir: File = project.file("libs")
+    /** Persistent prebuilds directory. */
+    private val prebuildsDir: File = project.rootProject.rootDir.resolve("prebuilds/natives")
 
-    /** Already-registered extract task names (avoids duplicates). */
-    private val registered = mutableMapOf<String, String>()
+    /** Map of asset names to their corresponding task providers. */
+    private val taskProviders = mutableMapOf<String, TaskProvider<TdlibArtifactTask>>()
 
-    // ------------------------------------------------------------------
-    // Public API
-    // ------------------------------------------------------------------
-
-    /** JNI shared library for the current host OS (used by JVM target). */
-    fun jniForHost(): String {
-        val archId = when (hostOs) {
-            TdlibOS.Windows -> if (hostArch == TdlibArch.X64) "x64" else "arm64"
-            else             -> if (hostArch == TdlibArch.X64) "x86_64" else "arm64"
+    /** JNI shared library for the given OS/arch (used by JVM target). */
+    fun jniFor(os: TdlibOS, arch: TdlibArch): TaskProvider<TdlibArtifactTask> {
+        val target = TdlibTarget(os, arch)
+        val archId = when {
+            os == TdlibOS.Windows && arch == TdlibArch.X64 -> "x64"
+            arch == TdlibArch.X64 -> "x86_64"
+            else -> "arm64"
         }
-        val localArch = if (hostOs == TdlibOS.Windows && hostArch == TdlibArch.X64) "x64" else archId
-        return register("tdlib-${hostOs.id}-jni-$archId", "${hostOs.id}-$localArch-jni")
+        return getOrCreateTask("tdlib-${os.id}-jni-$archId", target.jniLocalDir())
     }
 
     /** Static / native library for a K/N target. */
-    fun nativeFor(os: TdlibOS, arch: TdlibArch, isSimulator: Boolean = false): String {
+    fun nativeFor(target: KotlinNativeTarget): TaskProvider<TdlibArtifactTask> {
+        val os = target.konanTarget.family.toTdlibOS()
+        val arch = target.konanTarget.architecture.toTdlibArch()
+        val isSimulator = target.konanTarget.isSimulator
+        val tdTarget = TdlibTarget(os, arch)
         val asset = assetName(os, arch, isSimulator)
-        val local = localDir(os, arch, isSimulator)
-        return register(asset, local)
+        val local = tdTarget.nativeLocalDir(isSimulator)
+        return getOrCreateTask(asset, local)
     }
 
     /** Android SO for a given ABI string (e.g. "arm64-v8a"). */
-    fun androidFor(abi: String): String =
-        register("tdlib-android-$abi", "android-$abi")
+    fun androidFor(abi: String): TaskProvider<TdlibArtifactTask> =
+        getOrCreateTask("tdlib-android-$abi", "android-$abi")
 
-    // ------------------------------------------------------------------
-    // Task registration (idempotent)
-    // ------------------------------------------------------------------
-
-    private fun register(assetName: String, localDir: String): String =
-        registered.getOrPut(assetName) {
+    private fun getOrCreateTask(assetName: String, localDir: String): TaskProvider<TdlibArtifactTask> {
+        return taskProviders.getOrPut(assetName) {
             val suffix = assetName.removePrefix("tdlib-")
                 .split("-")
                 .joinToString("") { it.replaceFirstChar(Char::titlecase) }
 
-            val dlTask = "downloadTdlib$suffix"
-            val exTask = "extractTdlib$suffix"
+            val taskName = "downloadAndExtractTdlib$suffix"
+            val targetDir = prebuildsDir.resolve(localDir)
 
-            val targetDir = libsDir.resolve(localDir)
-
-            project.tasks.register(dlTask, Download::class.java) {
+            project.tasks.register(taskName, TdlibArtifactTask::class.java) {
                 group = "tdlib"
-                description = "Download $assetName.tar.gz"
-                src("$releaseUrl/$assetName.tar.gz")
-                dest(project.layout.buildDirectory.file("downloads/$assetName.tar.gz"))
-                overwrite(false)
-                acceptAnyCertificate(true)
-                onlyIf { !targetDir.exists() || targetDir.listFiles().isNullOrEmpty() }
+                description = "Download and extract TDLib asset: $assetName"
+                tdlibVersion.set(this@TdlibDependencies.tdlibVersion)
+                this.assetName.set(assetName)
+                this.outputDirectory.set(targetDir)
             }
-
-            project.tasks.register(exTask, Copy::class.java) {
-                group = "tdlib"
-                description = "Extract $assetName → libs/$localDir"
-                dependsOn(dlTask)
-                from(project.tarTree(project.layout.buildDirectory.file("downloads/$assetName.tar.gz")))
-                into(targetDir)
-                onlyIf { !targetDir.exists() || targetDir.listFiles().isNullOrEmpty() }
-            }
-
-            exTask
         }
-
-    // ------------------------------------------------------------------
-    // Asset / local-dir name helpers
-    // ------------------------------------------------------------------
+    }
 
     private fun assetName(os: TdlibOS, arch: TdlibArch, sim: Boolean): String {
         val tail = when {
@@ -103,17 +76,5 @@ class TdlibDependencies(
             else -> error("Unsupported: $os / $arch")
         }
         return "tdlib-${os.id}-$tail"
-    }
-
-    private fun localDir(os: TdlibOS, arch: TdlibArch, sim: Boolean): String {
-        val tail = when {
-            os == TdlibOS.IOS && sim  -> if (arch == TdlibArch.Arm64) "arm64-simulator" else "x86_64-simulator"
-            os == TdlibOS.IOS         -> "arm64"
-            os == TdlibOS.Linux       -> if (arch == TdlibArch.X64) "x86_64" else "arm64"
-            os == TdlibOS.MacOS       -> if (arch == TdlibArch.X64) "x86_64" else "arm64"
-            os == TdlibOS.Windows     -> if (arch == TdlibArch.X64) "x64"    else "arm64"
-            else -> error("Unsupported: $os / $arch")
-        }
-        return "${os.id}-$tail"
     }
 }

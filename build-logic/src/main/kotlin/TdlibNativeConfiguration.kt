@@ -2,6 +2,7 @@ import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.CInteropProcess
+import org.jetbrains.kotlin.konan.target.Family
 
 /**
  * Static libraries bundled inside every td-pack native archive.
@@ -23,21 +24,17 @@ private val TDLIB_STATIC_LIBS = listOf(
     "libssl.a",
 )
 
-/**
- * Returns a local directory name for the given OS/arch/simulator combination.
- * Must match the values used in [TdlibDependencies.localDir].
- */
-private fun localDirName(os: TdlibOS, arch: TdlibArch, isSimulator: Boolean): String {
-    val tail = when {
-        os == TdlibOS.IOS && isSimulator -> if (arch == TdlibArch.Arm64) "arm64-simulator" else "x86_64-simulator"
-        os == TdlibOS.IOS                -> "arm64"
-        os == TdlibOS.Linux              -> if (arch == TdlibArch.X64) "x86_64" else "arm64"
-        os == TdlibOS.MacOS              -> if (arch == TdlibArch.X64) "x86_64" else "arm64"
-        os == TdlibOS.Windows            -> if (arch == TdlibArch.X64) "x64"    else "arm64"
-        else -> error("Unsupported: $os / $arch")
-    }
-    return "${os.id}-$tail"
+private fun linkerFlagsFor(family: Family): List<String> = when (family) {
+    Family.OSX, Family.IOS -> listOf(
+        "-framework", "Security",
+        "-framework", "Foundation",
+        "-lz", "-lc++",
+    )
+    Family.LINUX -> listOf("-lz", "-lstdc++", "-lm", "-ldl", "-lpthread")
+    Family.MINGW -> listOf("-lws2_32", "-lcrypt32", "-lnormaliz")
+    else -> emptyList()
 }
+
 
 /**
  * Configures a Kotlin/Native target for TDLib:
@@ -50,100 +47,55 @@ private fun localDirName(os: TdlibOS, arch: TdlibArch, isSimulator: Boolean): St
  * Analogous to `configureNativeTarget` in JetBrains/skiko
  * (`NativeTasksConfiguration.kt`).
  */
-fun TdlibProjectContext.configureNativeTarget(
-    os: TdlibOS,
-    arch: TdlibArch,
-    target: KotlinNativeTarget,
-    isSimulator: Boolean = false,
-) = with(project) {
-    val localDir = localDirName(os, arch, isSimulator)
-    val libsDir = project.file("libs/$localDir")
+fun TdlibProjectContext.configureNativeTarget(target: KotlinNativeTarget) = with(project) {
+    val os = target.konanTarget.family.toTdlibOS()
+    val arch = target.konanTarget.architecture.toTdlibArch()
+    val isSimulator = target.konanTarget.isSimulator
 
-    // Absolute paths to every static library that must be linked into the klib.
-    val staticLibPaths = TDLIB_STATIC_LIBS.map { libsDir.resolve("lib/$it").absolutePath }
+    val artifactTask = tdlibDeps.nativeFor(target)
+    val localDirStr = TdlibTarget(os, arch).nativeLocalDir(isSimulator)
+    // Path is known statically at configuration time — no Provider.get() needed.
+    // The files themselves are guaranteed to exist by dependsOn(artifactTask) below.
+    val extractDir = rootProject.rootDir.resolve("prebuilds/natives/$localDirStr")
 
-    // Platform-specific linker options.
-    val linkerFlags: List<String> = when (os) {
-        TdlibOS.MacOS -> listOf(
-            "-framework", "Security",
-            "-framework", "Foundation",
-            "-lz", "-lc++",
-        )
-        TdlibOS.IOS -> listOf(
-            "-framework", "Security",
-            "-framework", "Foundation",
-            "-lz", "-lc++",
-        )
-        TdlibOS.Linux -> listOf("-lz", "-lstdc++", "-lm", "-ldl", "-lpthread")
-        TdlibOS.Windows -> listOf("-lws2_32", "-lcrypt32", "-lnormaliz")
-        else -> emptyList()
-    }
+    val staticLibPaths = TDLIB_STATIC_LIBS.map { extractDir.resolve("lib/$it").absolutePath }
+    val linkerFlags = linkerFlagsFor(target.konanTarget.family)
+    val allFlags: List<String> =
+        staticLibPaths.flatMap { listOf("-include-binary", it) } +
+        linkerFlags.flatMap { listOf("-linker-option", it) }
 
-    // ---------------------------------------------------------------
-    // 1. Dynamic .def generation
-    // ---------------------------------------------------------------
-    val targetSuffix = localDir.split("-")
+    val suffix = localDirStr
+        .split("-")
         .joinToString("") { it.replaceFirstChar(Char::titlecase) }
 
-    val writeDef = tasks.register<WriteTdlibCInteropDef>("writeTdlibDef$targetSuffix") {
-        headerPaths.set(listOf(libsDir.resolve("include").absolutePath))
+    val writeDef = tasks.register<WriteTdlibCInteropDef>("writeTdlibDef$suffix") {
+        headerPaths.set(listOf(extractDir.resolve("include").absolutePath))
         this.linkerOpts.set(linkerFlags)
-        outputFile.set(layout.buildDirectory.file("cinterop/$localDir/tdjson.def"))
+        // Use localDirStr (String) to avoid Provider.toString() garbage path in the cinterop dir name
+        outputFile.set(layout.buildDirectory.file("cinterop/$localDirStr/tdjson.def"))
     }
 
     // Make sure the cinterop task depends on the .def-writing task.
     tasks.withType<CInteropProcess>().configureEach {
         if (konanTarget == target.konanTarget) {
-            dependsOn(writeDef)
+            dependsOn(writeDef, artifactTask)
         }
     }
 
-    // ---------------------------------------------------------------
-    // 2. Register the `tdjson` cinterop
-    // ---------------------------------------------------------------
     target.compilations.getByName("main") {
         cinterops.create("tdjson") {
             definitionFile.set(writeDef.flatMap { it.outputFile })
         }
     }
 
-    // ---------------------------------------------------------------
-    // 3. Include static binaries + linker flags
-    // ---------------------------------------------------------------
-    val allFlags = staticLibPaths.flatMap { listOf("-include-binary", it) } +
-        linkerFlags.flatMap { listOf("-linker-option", it) }
+    target.compilations.all {
+        compileTaskProvider.configure {
+            compilerOptions.freeCompilerArgs.addAll(allFlags)
+            dependsOn(artifactTask)
+        }
+    }
 
     target.binaries.all {
         freeCompilerArgs += allFlags
-    }
-
-    target.compilations.all {
-        compileTaskProvider.configure {
-            compilerOptions {
-                freeCompilerArgs.addAll(allFlags)
-            }
-        }
-    }
-}
-
-/**
- * Wires the extract task for a given native target so that
- * cinterop and compilation tasks depend on extraction.
- */
-fun TdlibProjectContext.wireNativeExtractTask(
-    extractTaskName: String,
-    target: KotlinNativeTarget,
-) = with(project) {
-    // cinterop tasks
-    tasks.withType<CInteropProcess>().configureEach {
-        if (konanTarget == target.konanTarget) {
-            dependsOn(extractTaskName)
-        }
-    }
-    // compilation tasks
-    target.compilations.all {
-        compileTaskProvider.configure {
-            dependsOn(extractTaskName)
-        }
     }
 }

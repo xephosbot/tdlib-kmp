@@ -10,4 +10,4 @@ build/
 .cxx
 local.properties
 *.tar.gz
-tdlib/libs/
+prebuilds/
