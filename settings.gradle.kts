@@ -1,3 +1,4 @@
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "tdlib-kmp"
 
 pluginManagement {
@@ -28,4 +29,4 @@ dependencyResolutionManagement {
 }
 
 include(":tdlib")
- 
+include(":tdlib-client")

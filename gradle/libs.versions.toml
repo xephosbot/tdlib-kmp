@@ -7,6 +7,8 @@ android-gradle-plugin = "9.1.0"
 
 # Kotlin
 kotlin = "2.3.20"
+coroutines = "1.10.2"
+serialization = "1.10.0"
 
 # Utils
 gradle-download-task = "5.7.0"
@@ -22,9 +24,12 @@ android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref
 gradle-download-task-gradle-plugin = { module = "de.undercouch:gradle-download-task", version.ref = "gradle-download-task" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidx-test" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 android-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "android-gradle-plugin" }
 gradle-download-task = { id = "de.undercouch.download", version.ref = "gradle-download-task" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
